@@ -68,7 +68,8 @@ public class Controller extends HttpServlet {
         content = content.replace("'", "&#39;");
         HubbubDAO db = (HubbubDAO) this.getServletContext().getAttribute("db");
         User author = (User) request.getSession().getAttribute("user");
-        db.addPost(content, author);
+        Profile profile = (Profile) request.getSession().getAttribute("profile");
+        db.addPost(content, author, profile);
         if (db.getLastError() != null) {
             request.setAttribute("flash", db.getLastError());
             return "post";

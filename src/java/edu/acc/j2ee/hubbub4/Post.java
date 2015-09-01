@@ -7,15 +7,17 @@ public class Post implements java.io.Serializable {
     private Date postDate;
     private User author;
     private int id;
+    private Profile profile;
     
-    public Post(String content, Date postDate, User author) {
+    public Post(String content, Date postDate, User author, Profile profile) {
         this.content = content;
         this.postDate = postDate;
         this.author = author;
+        this.profile = profile;
     }
     
-    public Post(String content, Date postDate, User author, int id) {
-        this(content, postDate, author);
+    public Post(String content, Date postDate, User author, Profile profile, int id) {
+        this(content, postDate, author, profile);
         this.id = id;
     }
     
@@ -36,6 +38,9 @@ public class Post implements java.io.Serializable {
     public User getAuthor() {
         return author;
     }
+    public Profile getProfile() {
+        return profile;
+    }
 
     public void setContent(String content) {
         this.content = content;
@@ -52,10 +57,16 @@ public class Post implements java.io.Serializable {
     public void setAuthor(User author) {
         this.author = author;
     }
-    
+    public void setProfile(Profile profile) {
+        this.profile = profile;
+    }
     @Override
     public String toString() {
         return String.format("%d characters posted by User %s on %s",
                 content.length(), author, postDate);
     }
+
+    
+
+    
 }

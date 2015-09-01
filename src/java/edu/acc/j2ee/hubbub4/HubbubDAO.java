@@ -11,8 +11,9 @@ import java.util.List;
 import java.util.Date;
 
 public class HubbubDAO {
+
     private String lastError;
-    
+
     private Connection CONN;
 
     public HubbubDAO(String jdbcUrl) {
@@ -23,9 +24,11 @@ public class HubbubDAO {
             lastError = sqle.getMessage();
         }
     }
-    
-    public String getLastError() { return lastError; }
-    
+
+    public String getLastError() {
+        return lastError;
+    }
+
     protected void addPost(Post post) {
         String sql = "INSERT INTO POSTS (content, authorid, postdate) VALUES (?,?,?)";
         PreparedStatement pstat = null;
@@ -39,15 +42,17 @@ public class HubbubDAO {
         } catch (SQLException sqle) {
             lastError = sqle.getMessage();
         } finally {
-            if (pstat != null)
+            if (pstat != null) {
                 try {
                     pstat.close();
-                } catch (SQLException sqle) {}
+                } catch (SQLException sqle) {
+                }
+            }
         }
     }
 
-    public void addPost(String content, User user) {
-        Post post = new Post(content, new Date(), user);
+    public void addPost(String content, User user, Profile profile) {
+        Post post = new Post(content, new Date(), user, profile);
         addPost(post);
     }
 
@@ -64,6 +69,7 @@ public class HubbubDAO {
                         rs.getString("content"),
                         new Date(rs.getDate("postdate").getTime()),
                         getUserById(rs.getInt("authorid")),
+                        getProfileJoinDateById(rs.getInt("authorid")),
                         rs.getInt("id")
                 );
                 posts.add(p);
@@ -72,18 +78,22 @@ public class HubbubDAO {
         } catch (SQLException sqle) {
             lastError = sqle.getMessage();
         } finally {
-            if (rs != null)
+            if (rs != null) {
                 try {
                     rs.close();
-                } catch (SQLException sqle) {}
-            if (stat != null)
+                } catch (SQLException sqle) {
+                }
+            }
+            if (stat != null) {
                 try {
                     stat.close();
-                } catch (SQLException sqle) {}            
+                } catch (SQLException sqle) {
+                }
+            }
         }
-        return posts;   
+        return posts;
     }
-    
+
     public User getUserById(int id) {
         String sql = "SELECT * FROM USERS WHERE id = " + id;
         Statement stat = null;
@@ -93,8 +103,58 @@ public class HubbubDAO {
             stat = CONN.createStatement();
             rs = stat.executeQuery(sql);
             if (rs.next()) {
+                /*
+                 user = new User(
+                 rs.getString("username"),
+                 new Date(rs.getDate("joindate").getTime()),
+                 rs.getInt("id")
+                 );
+                 */
                 user = new User(
                         rs.getString("username"),
+                        rs.getInt("id")
+                );
+            }
+            lastError = null;
+        } catch (SQLException sqle) {
+            lastError = sqle.getMessage();
+        } finally {
+            if (rs != null) {
+                try {
+                    rs.close();
+                } catch (SQLException sqle) {
+                }
+            }
+            if (stat != null) {
+                try {
+                    stat.close();
+                } catch (SQLException sqle) {
+                }
+            }
+        }
+        return user;
+    }
+
+    public Profile getProfileJoinDateById(int authorId) {
+        String sql = "SELECT p.joindate, p.id FROM PROFILES AS P "
+                + "INNER JOIN USERS AS U "
+                + "ON P.ID = U.PROFILEID "
+                + "WHERE U.ID = " + authorId;
+        Statement stat = null;
+        ResultSet rs = null;
+        Profile profile = null;
+        try {
+            stat = CONN.createStatement();
+            rs = stat.executeQuery(sql);
+            if (rs.next()) {
+                /*
+                 user = new User(
+                 rs.getString("username"),
+                 new Date(rs.getDate("joindate").getTime()),
+                 rs.getInt("id")
+                 );
+                 */
+                profile = new Profile(
                         new Date(rs.getDate("joindate").getTime()),
                         rs.getInt("id")
                 );
@@ -103,16 +163,20 @@ public class HubbubDAO {
         } catch (SQLException sqle) {
             lastError = sqle.getMessage();
         } finally {
-            if (rs != null)
+            if (rs != null) {
                 try {
                     rs.close();
-                } catch (SQLException sqle) {}
-            if (stat != null)
+                } catch (SQLException sqle) {
+                }
+            }
+            if (stat != null) {
                 try {
                     stat.close();
-                } catch (SQLException sqle) {}            
+                } catch (SQLException sqle) {
+                }
+            }
         }
-        return user;
+        return profile;
     }
 
     public User authenticate(String userName, String password) {
@@ -127,7 +191,6 @@ public class HubbubDAO {
             if (rs.next()) {
                 user = new User(
                         rs.getString("username"),
-                        new Date(rs.getDate("joindate").getTime()),
                         rs.getInt("id")
                 );
             }
@@ -135,56 +198,148 @@ public class HubbubDAO {
         } catch (SQLException sqle) {
             lastError = sqle.getMessage();
         } finally {
-            if (rs != null)
+            if (rs != null) {
                 try {
                     rs.close();
-                } catch (SQLException sqle) {}
-            if (stat != null)
+                } catch (SQLException sqle) {
+                }
+            }
+            if (stat != null) {
                 try {
                     stat.close();
-                } catch (SQLException sqle) {}
+                } catch (SQLException sqle) {
+                }
+            }
         }
         return user;
     }
-    
-    public int register(RegistrationBean bean) {
-        String sql = "INSERT INTO USERS (username,password,firstname,lastname,email,zip)";
-        sql += " VALUES (?,?,?,?,?,?)";
+
+    public int insertProfile(RegistrationBean bean) {
+        String sql = "INSERT INTO PROFILES(firstname,lastname,email,zip)";
+        sql += " VALUES(?, ?, ?, ?)";
         PreparedStatement pstat = null;
         ResultSet rs = null;
-        int id = 0;
+        int profileId = 0;
         try {
             pstat = CONN.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
-            pstat.setString(1, bean.getUserName());
-            pstat.setString(2, bean.getPassword1());
-            pstat.setString(3, bean.getFirstName());
-            pstat.setString(4, bean.getLastName());
-            pstat.setString(5, bean.getEmail());
-            pstat.setString(6, bean.getZipCode());
+            pstat.setString(1, bean.getFirstName());
+            pstat.setString(2, bean.getLastName());
+            pstat.setString(3, bean.getEmail());
+            pstat.setString(4, bean.getZipCode());
             pstat.executeUpdate();
             rs = pstat.getGeneratedKeys();
-            if (rs.next())
-                id = rs.getInt(1);
+            if (rs.next()) {
+                profileId = rs.getInt(1);
+            }
             lastError = null;
         } catch (SQLException sqle) {
             lastError = sqle.getMessage();
         } finally {
-            if (rs != null)
+            if (rs != null) {
                 try {
                     rs.close();
-                } catch (SQLException sqle) {}
-            if (pstat != null)
+                } catch (SQLException sqle) {
+                }
+            }
+            if (pstat != null) {
                 try {
                     pstat.close();
-                } catch (SQLException sqle) {}
+                } catch (SQLException sqle) {
+                }
+            }
         }
-        return id;
+
+        return profileId;
+    }
+
+    public int register(RegistrationBean bean) {
+        int userId = 0;
+        int profileId = 0;
+        userId = insertUser(bean);
+        if (getLastError() != null) {
+            return 0;
+        }
+        profileId = insertProfile(bean);
+        if (getLastError() != null) {
+            return 0;
+        }
+        updateUser(userId, profileId);
+        if (getLastError() != null) {
+            return 0;
+        }
+        return userId;
+    }
+
+    public int insertUser(RegistrationBean bean) {
+        int userId = 0;
+        String sql = "INSERT INTO USERS (username,password)";
+        sql += " VALUES (?,?)";
+        PreparedStatement pstat = null;
+        ResultSet rs = null;
+        try {
+            pstat = CONN.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+            pstat.setString(1, bean.getUserName());
+            pstat.setString(2, bean.getPassword1());
+            pstat.executeUpdate();
+            rs = pstat.getGeneratedKeys();
+            if (rs.next()) {
+                userId = rs.getInt(1);
+            }
+            lastError = null;
+        } catch (SQLException sqle) {
+            lastError = sqle.getMessage();
+        } finally {
+            if (rs != null) {
+                try {
+                    rs.close();
+                } catch (SQLException sqle) {
+                }
+            }
+            if (pstat != null) {
+                try {
+                    pstat.close();
+                } catch (SQLException sqle) {
+                }
+            }
+        }
+        return userId;
+    }
+
+    public void updateUser(int userId, int profileId) {
+        String sql = "UPDATE USERS SET PROFILEID = ?"
+                + " WHERE ID = ?";
+        PreparedStatement pstat = null;
+        ResultSet rs = null;
+        try {
+            pstat = CONN.prepareStatement(sql);
+            pstat.setInt(1, userId);
+            pstat.setInt(2, profileId);
+            pstat.executeUpdate();
+            lastError = null;
+        } catch (SQLException sqle) {
+            lastError = sqle.getMessage();
+        } finally {
+            if (rs != null) {
+                try {
+                    rs.close();
+                } catch (SQLException sqle) {
+                }
+            }
+            if (pstat != null) {
+                try {
+                    pstat.close();
+                } catch (SQLException sqle) {
+                }
+            }
+        }
     }
 
     public void close() {
-        if(CONN != null)
+        if (CONN != null) {
             try {
                 CONN.close();
-            } catch (SQLException sqle) {}
+            } catch (SQLException sqle) {
+            }
+        }
     }
 }

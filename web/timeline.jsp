@@ -27,7 +27,7 @@
             <div class="postdiv">
                 <span class="authorspan">${post.author}</span>
                 <span class="datespan">(user since
-                    <fmt:formatDate type="DATE" value="${post.author.joinDate}"/>)
+                    <fmt:formatDate type="DATE" value="${post.profile.joinDate}"/>)
                 </span>
                 <div class="contentdiv">
                     ${post.content}
